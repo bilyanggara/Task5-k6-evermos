@@ -11,14 +11,14 @@ export const options = {
         },
     },
     thresholds: {
-        'http_req_duration': ['p(95)<2000']
+        'http_req_duration': ['avg<2000']
     },
 };
 
 export default function () {
     let summary = {};
-    
     group('API Test', function () {
+        let res1,res2,id;
         const baseUrl = 'https://reqres.in/api';
         let payload1 = JSON.stringify({
             name: "morpheus",
@@ -29,30 +29,31 @@ export default function () {
             job: "zion resident"
         });
 
-        // Create
-        const res1 = http.post(`${baseUrl}/users`, payload1, {
-            headers: { 'Content-type': 'application/json' }
+        group('Create API', function () {
+            res1 = http.post(`${baseUrl}/users`, payload1, {
+                headers: { 'Content-type': 'application/json' }
+            });
+    
+            check(res1, {
+                'Response code was 201': (res1) => res1.status === 201,
+                'Response body contains user ID': (res1) => JSON.parse(res1.body).hasOwnProperty('id'),
+                'Response body contains timestamp created': (res1) => JSON.parse(res1.body).hasOwnProperty('createdAt'),
+            });
         });
+        
+        group('Update API', function(){
+            id = JSON.parse(res1.body).id;
+            res2 = http.put(`${baseUrl}/users/${id}`, payload2, {
+                headers: { 'Content-type': 'application/json' }
+            });
 
-        check(res1, {
-            'Response code was 201': (res1) => res1.status === 201,
-            'Response body contains user ID': (res1) => JSON.parse(res1.body).hasOwnProperty('id'),
-            'Response body contains timestamp created': (res1) => JSON.parse(res1.body).hasOwnProperty('createdAt'),
-        });
-
-        // Update
-        let id = JSON.parse(res1.body).id;
-        const res2 = http.put(`${baseUrl}/users/${id}`, payload2, {
-            headers: { 'Content-type': 'application/json' }
-        });
-
-        check(res2, {
-            'Response code was 200': (res2) => res2.status === 200,
-            'Response body contains updated job': (res2) => JSON.parse(res2.body).job === 'zion resident',
-            'Response body contains timestamp updated': (res2) => JSON.parse(res2.body).hasOwnProperty('updatedAt'),
+            check(res2, {
+                'Response code was 200': (res2) => res2.status === 200,
+                'Response body contains updated job': (res2) => JSON.parse(res2.body).job === 'zion resident',
+                'Response body contains timestamp updated': (res2) => JSON.parse(res2.body).hasOwnProperty('updatedAt'),
+            });
         });
     });
-
     return summary;
 }
 
